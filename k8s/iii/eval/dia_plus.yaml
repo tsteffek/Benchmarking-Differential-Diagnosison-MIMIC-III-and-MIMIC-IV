@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dia-plus-eval-iii
+  labels:
+    app: dia-plus-eval-iii
+spec:
+  template:
+    metadata:
+      labels:
+        app: dia-plus-eval-iii
+    spec:
+      containers:
+        - name: dia-plus-eval-iii
+          image: registry.datexis.com/tsteffek/clinical-outcome-prediction:0.0.18
+          command: [
+            "python", "/experiments/doc_classification.py",
+            "--task_config", /data/configs/iii/eval/config_dia_plus.yaml,
+            "--model_name_or_path", /models/cop-dia-plus/dia_plus_core-d/exp_292943,
+            "--cache_dir", "None",
+            "--do_train", "False",
+            "--print_preds", "True",
+            "--run_name", "eval"
+          ]
+          env:
+            - name: LANG
+              value: 'C.UTF-8'
+          resources:
+            requests:
+              cpu: "1"
+              memory: 20Gi
+            limits:
+              nvidia.com/gpu: "1"
+              memory: 100Gi
+          volumeMounts:
+            - name: pe-models
+              mountPath: /models
+            - name: mimic-iii
+              mountPath: /data
+            - name: dshm
+              mountPath: /dev/shm
+      nodeSelector:
+        gpu: a100
+      volumes:
+        - name: mimic-iii
+          persistentVolumeClaim:
+            claimName: mimic-iii
+        - name: pe-models
+          persistentVolumeClaim:
+            claimName: pe-models
+        - name: dshm
+          emptyDir:
+            medium: Memory
+      imagePullSecrets:
+        - name: private-registry-auth
+      restartPolicy: Never

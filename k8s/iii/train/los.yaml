@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: los
+  labels:
+    app: los
+spec:
+  template:
+    metadata:
+      labels:
+        app: los
+    spec:
+      containers:
+        - name: los
+          image: registry.datexis.com/tsteffek/clinical-outcome-prediction:0.0.18
+          command: [
+#                                 "sleep", "1800"
+            "python", "/experiments/doc_classification.py",
+            "--task_config", "/data/configs/iii/train/config_los.yaml",
+            "--model_name_or_path", "dmis-lab/biobert-v1.1",
+            "--balance_classes", "False",
+            "--embeds_dropout", "0.287527",
+            "--grad_acc", "1",
+            "--lr", "3.10114e-05",
+            "--warmup_steps", "4117.32"
+          ]
+          env:
+            - name: LANG
+              value: 'C.UTF-8'
+          resources:
+            requests:
+              cpu: "1"
+            limits:
+              nvidia.com/gpu: "1"
+              memory: 20Gi
+          volumeMounts:
+            - name: pe-models
+              mountPath: /models
+            - name: mimic-iii
+              mountPath: /data
+            - name: dshm
+              mountPath: /dev/shm
+      nodeSelector:
+        gpu: a100
+      volumes:
+        - name: mimic-iii
+          persistentVolumeClaim:
+            claimName: mimic-iii
+        - name: pe-models
+          persistentVolumeClaim:
+            claimName: pe-models
+        - name: dshm
+          emptyDir:
+            medium: Memory
+      imagePullSecrets:
+        - name: private-registry-auth
+      restartPolicy: Never
+
+
+
+
+

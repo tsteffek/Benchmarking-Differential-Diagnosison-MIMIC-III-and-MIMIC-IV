@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: dia-plus-core-d
+  labels:
+    app: dia-plus-core-d
+spec:
+  template:
+    metadata:
+      labels:
+        app: dia-plus-core-d
+    spec:
+      containers:
+        - name: dia-plus-core-d
+          image: registry.datexis.com/tsteffek/clinical-outcome-prediction:0.0.18
+          command: [
+            "python", "/experiments/doc_classification.py",
+            "--task_config", "/data/configs/iii/train/config_dia_plus.yaml",
+            "--model_name_or_path", "bvanaken/CORe-clinical-outcome-biobert-v1",
+            "--cache_dir", "/models/cache",
+            "--balance_classes", "False",
+            "--embeds_dropout", "0.18554552074812689",
+            "--grad_acc", "1",
+            "--lr", "4.59432730680624e-05",
+            "--warmup_steps", "3589.711952840286"
+          ]
+          env:
+            - name: LANG
+              value: "C.UTF-8"
+          resources:
+            requests:
+              cpu: "1"
+            limits:
+              nvidia.com/gpu: "1"
+              memory: 20Gi
+          volumeMounts:
+            - name: pe-models
+              mountPath: /models
+            - name: mimic-iii
+              mountPath: /data
+            - name: dshm
+              mountPath: /dev/shm
+      nodeSelector:
+        gpu: a100
+      volumes:
+        - name: mimic-iii
+          persistentVolumeClaim:
+            claimName: mimic-iii
+        - name: pe-models
+          persistentVolumeClaim:
+            claimName: pe-models
+        - name: dshm
+          emptyDir:
+            medium: Memory
+      imagePullSecrets:
+        - name: private-registry-auth
+      restartPolicy: Never

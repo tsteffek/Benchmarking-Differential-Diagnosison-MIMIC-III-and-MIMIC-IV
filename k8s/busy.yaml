@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  containers:
+  - image: busybox
+    command:
+      - sleep
+      - "172800"  # 2 days
+    imagePullPolicy: IfNotPresent
+    name: busybox
+    volumeMounts:
+      - name: pe-models
+        mountPath: /models
+      - name: mimic-iii
+        mountPath: /data
+  volumes:
+    - name: mimic-iii
+      persistentVolumeClaim:
+        claimName: mimic-iii
+    - name: pe-models
+      persistentVolumeClaim:
+        claimName: pe-models
+  restartPolicy: Never

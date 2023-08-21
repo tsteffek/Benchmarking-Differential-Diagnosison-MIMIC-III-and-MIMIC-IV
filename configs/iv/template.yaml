@@ -1,0 +1,17 @@
+experiment_name: {{ experiment }}
+task_type: "text_classification"
+output_type: "per_sequence"
+multilabel: {{ multilabel }}
+metric: {{ metric }}
+output_dir: "/models"
+log_dir: "/models/logs"
+data:
+  data_dir: "/data/mimic-iv-processed"
+  train_filename: "empty.csv"
+  dev_filename: "empty.csv"
+  test_filename: {{ test_file }}
+  label_list: {{ label_list }}
+  parsing:
+    label_column: {{ label }}
+    delimiter: ","
+    quote_char: "\""

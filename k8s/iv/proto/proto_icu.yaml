@@ -1,0 +1,67 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: proto-eval-icu
+  labels:
+    app: proto-eval-icu
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: proto-eval-icu
+    spec:
+      containers:
+        - name: proto-eval-icu
+          image: registry.datexis.com/tsteffek/protopatient:0.0.22
+          command: [
+            "python", "testing.py",
+            "--model_type", "PROTO",
+            "--train_file", "/data/mimic-iv-processed/empty.csv",
+            "--val_file", "/data/mimic-iv-processed/empty.csv",
+            "--test_file", "/data/mimic-iv-processed/dia_icu.csv",
+            "--num_warmup_steps", "5000",
+            "--num_training_steps", "5000",
+            "--lr_features", "0.000005",
+            "--lr_prototypes", "0.001",
+            "--lr_others", "0.001",
+            "--use_attention", "True",
+            "--reduce_hidden_size", "256",
+            "--all_labels_path", "/data/mimic-iv-processed/ALL_3_DIGIT_DIA_CODES.txt",
+            "--save_dir", "/models/proto/",
+            "--resume_from_checkpoint", "/models/final/proto/checkpoints/ckpt-epoch=297.ckpt",
+            "--do_train", "False",
+            "--label_column", "labels",
+            "--id_column", "hadm_id"
+          ]
+          env:
+            - name: LANG
+              value: 'C.UTF-8'
+          resources:
+            requests:
+              cpu: "2"
+            limits:
+              nvidia.com/gpu: "1"
+              memory: 30Gi
+          volumeMounts:
+            - name: pe-models
+              mountPath: /models
+            - name: mimic-iii
+              mountPath: /data
+            - name: dshm
+              mountPath: /dev/shm
+      nodeSelector:
+        gpu: a100
+      volumes:
+        - name: mimic-iii
+          persistentVolumeClaim:
+            claimName: mimic-iii
+        - name: pe-models
+          persistentVolumeClaim:
+            claimName: pe-models
+        - name: dshm
+          emptyDir:
+            medium: Memory
+      imagePullSecrets:
+        - name: private-registry-auth
+      restartPolicy: Never

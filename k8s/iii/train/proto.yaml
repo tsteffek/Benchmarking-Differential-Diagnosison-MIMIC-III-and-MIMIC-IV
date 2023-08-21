@@ -1,0 +1,63 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: proto-c
+  labels:
+    app: proto-c
+spec:
+  template:
+    metadata:
+      labels:
+        app: proto-c
+    spec:
+      containers:
+        - name: proto-c
+          image: registry.datexis.com/tsteffek/protopatient:0.0.11
+          command: [
+            "python", "training.py",
+            "--model_type", "PROTO",
+            "--train_file", "/data/mimic-iii-processed/DIA_GROUPS_3_DIGITS_adm_train.csv",
+            "--val_file", "/data/mimic-iii-processed/DIA_GROUPS_3_DIGITS_adm_val.csv",
+            "--test_file", "/data/mimic-iii-processed/DIA_GROUPS_3_DIGITS_adm_test.csv",
+            "--num_warmup_steps", "5000",
+            "--num_training_steps", "5000",
+            "--lr_features", "0.000005",
+            "--lr_prototypes", "0.001",
+            "--lr_others", "0.001",
+            "--use_attention", "True",
+            "--reduce_hidden_size", "256",
+            "--all_labels_path", "/data/mimic-iii-processed/ALL_3_DIGIT_DIA_CODES.txt",
+            "--save_dir", "/models/proto/",
+            "--resume_from_checkpoint", "/models/proto/lightning_logs/version_0/checkpoints/ckpt-epoch=89.ckpt"
+          ]
+          env:
+            - name: LANG
+              value: 'C.UTF-8'
+          resources:
+            requests:
+              cpu: "2"
+            limits:
+              nvidia.com/gpu: "1"
+              memory: 30Gi
+          volumeMounts:
+            - name: pe-models
+              mountPath: /models
+            - name: mimic-iii
+              mountPath: /data
+            - name: dshm
+              mountPath: /dev/shm
+      nodeSelector:
+        gpu: a100
+      volumes:
+        - name: mimic-iii
+          persistentVolumeClaim:
+            claimName: mimic-iii
+        - name: pe-models
+          persistentVolumeClaim:
+            claimName: pe-models
+        - name: dshm
+          emptyDir:
+            medium: Memory
+      imagePullSecrets:
+        - name: private-registry-auth
+      restartPolicy: Never
